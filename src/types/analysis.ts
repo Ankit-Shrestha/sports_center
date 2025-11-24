@@ -45,6 +45,7 @@ export interface RevenueConfig {
     activities: SportActivity[];
     membershipCount: number;
     membershipMonthlyFee: number;
+    unusedDays: number;
 }
 
 export interface MonthlyFinancials {

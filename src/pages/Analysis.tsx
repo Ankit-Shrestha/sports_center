@@ -4,7 +4,6 @@ import { CostForm } from '../components/analysis/CostForm';
 import { OperatingForm } from '../components/analysis/OperatingForm';
 import { RevenueForm } from '../components/analysis/RevenueForm';
 import { FinancialCharts } from '../components/analysis/FinancialCharts';
-import { Calculator } from 'lucide-react';
 import '../styles/analysis.css';
 
 export const Analysis: React.FC = () => {
@@ -43,7 +42,8 @@ export const Analysis: React.FC = () => {
             { id: '2', name: 'Basketball', hourlyRate: 80, dailyHours: 6, courts: 2 }
         ],
         membershipCount: 200,
-        membershipMonthlyFee: 50
+        membershipMonthlyFee: 50,
+        unusedDays: 0
     });
 
     // Calculations
@@ -70,8 +70,11 @@ export const Analysis: React.FC = () => {
         const totalMonthlyOpCost = monthlyUtilities + monthlyStaffCost + monthlyPropertyTax;
 
         // 3. Revenue
+        const activeDaysPerYear = 365 - (revConfig.unusedDays || 0);
         const monthlyActivityRevenue = revConfig.activities.reduce((acc, act) => {
-            return acc + (act.hourlyRate * act.dailyHours * act.courts * 30); // Approx 30 days
+            const dailyRevenue = act.hourlyRate * act.dailyHours * act.courts;
+            const annualRevenue = dailyRevenue * activeDaysPerYear;
+            return acc + (annualRevenue / 12);
         }, 0);
         const monthlyMembershipRevenue = revConfig.membershipCount * revConfig.membershipMonthlyFee;
         const totalMonthlyRevenue = monthlyActivityRevenue + monthlyMembershipRevenue;
@@ -94,6 +97,11 @@ export const Analysis: React.FC = () => {
             });
         }
 
+        // 5. Break-Even Analysis
+        const netOperatingIncome = totalMonthlyRevenue - totalMonthlyOpCost;
+        const payoffMonths = netOperatingIncome > 0 ? loanPrincipal / netOperatingIncome : Infinity;
+        const payoffYears = payoffMonths / 12;
+
         return {
             monthlyData,
             summary: {
@@ -102,6 +110,13 @@ export const Analysis: React.FC = () => {
                 totalMonthlyOpCost,
                 totalMonthlyRevenue,
                 netMonthly: totalMonthlyRevenue - (totalMonthlyOpCost + monthlyLoanPayment)
+            },
+            breakEven: {
+                netOperatingIncome,
+                loanPrincipal,
+                payoffMonths,
+                payoffYears,
+                isProfitable: netOperatingIncome > 0
             }
         };
     }, [costConfig, opConfig, revConfig]);
@@ -112,14 +127,21 @@ export const Analysis: React.FC = () => {
         <div className="analysis-page">
             <div className="analysis-container">
                 <div className="page-header">
-                    <div className="flex items-center gap-4">
-                        <a href="/" className="icon-box hover:bg-blue-500/20 transition-colors" title="Back to Home">
-                            <Calculator size={32} />
-                        </a>
-                        <div>
-                            <h1 className="page-title">Financial Analysis</h1>
-                            <p className="page-subtitle">Project feasibility simulation & forecasting</p>
-                        </div>
+                    <a
+                        href="/"
+                        className="btn-add"
+                        style={{
+                            textDecoration: 'none',
+                            padding: '0.5rem 1rem',
+                            fontSize: '0.875rem',
+                            marginRight: '1rem'
+                        }}
+                    >
+                        ← Home
+                    </a>
+                    <div>
+                        <h1 className="page-title">Financial Analysis</h1>
+                        <p className="page-subtitle">Project feasibility simulation & forecasting</p>
                     </div>
                 </div>
 
@@ -143,7 +165,7 @@ export const Analysis: React.FC = () => {
                         <div className="form-container">
                             {activeTab === 'costs' && <CostForm config={costConfig} onChange={setCostConfig} />}
                             {activeTab === 'operations' && <OperatingForm config={opConfig} onChange={setOpConfig} />}
-                            {activeTab === 'revenue' && <RevenueForm config={revConfig} onChange={setRevConfig} />}
+                            {activeTab === 'revenue' && <RevenueForm config={revConfig} onChange={setRevConfig} breakEven={financials.breakEven} />}
                         </div>
                     </div>
 
